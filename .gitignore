@@ -48,3 +48,6 @@ yarn-error.*
 .vscode/
 *.swp
 *.swo
+
+# Planning docs
+.planning/
