@@ -67,21 +67,35 @@ ALTER TABLE routines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
--- families: user can only see their own
+-- families: user can only see/manage their own
+-- USING = applies to SELECT, UPDATE, DELETE (existing rows)
+-- WITH CHECK = applies to INSERT, UPDATE (new/modified rows)
 CREATE POLICY "Users manage own family" ON families
-  FOR ALL USING (auth.uid() = user_id);
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- children: through family_id
 CREATE POLICY "Users manage own children" ON children
-  FOR ALL USING (family_id IN (SELECT id FROM families WHERE user_id = auth.uid()));
+  FOR ALL
+  USING (family_id IN (SELECT id FROM families WHERE user_id = auth.uid()))
+  WITH CHECK (family_id IN (SELECT id FROM families WHERE user_id = auth.uid()));
 
 -- routines: through family_id
 CREATE POLICY "Users manage own routines" ON routines
-  FOR ALL USING (family_id IN (SELECT id FROM families WHERE user_id = auth.uid()));
+  FOR ALL
+  USING (family_id IN (SELECT id FROM families WHERE user_id = auth.uid()))
+  WITH CHECK (family_id IN (SELECT id FROM families WHERE user_id = auth.uid()));
 
 -- tasks: through routine -> family
 CREATE POLICY "Users manage own tasks" ON tasks
-  FOR ALL USING (routine_id IN (
+  FOR ALL
+  USING (routine_id IN (
+    SELECT id FROM routines WHERE family_id IN (
+      SELECT id FROM families WHERE user_id = auth.uid()
+    )
+  ))
+  WITH CHECK (routine_id IN (
     SELECT id FROM routines WHERE family_id IN (
       SELECT id FROM families WHERE user_id = auth.uid()
     )
@@ -89,7 +103,13 @@ CREATE POLICY "Users manage own tasks" ON tasks
 
 -- sessions: through child -> family
 CREATE POLICY "Users manage own sessions" ON sessions
-  FOR ALL USING (child_id IN (
+  FOR ALL
+  USING (child_id IN (
+    SELECT id FROM children WHERE family_id IN (
+      SELECT id FROM families WHERE user_id = auth.uid()
+    )
+  ))
+  WITH CHECK (child_id IN (
     SELECT id FROM children WHERE family_id IN (
       SELECT id FROM families WHERE user_id = auth.uid()
     )

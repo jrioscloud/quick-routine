@@ -17,6 +17,7 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showCheckEmail, setShowCheckEmail] = useState(false)
   const { signUp, isLoading } = useAuthStore()
 
   const handleSignup = async () => {
@@ -35,13 +36,43 @@ export default function SignupScreen() {
       return
     }
 
-    const { error } = await signUp(email.trim(), password, familyName.trim())
+    const { error, needsEmailConfirmation } = await signUp(email.trim(), password, familyName.trim())
 
     if (error) {
       Alert.alert('Signup Failed', error)
+    } else if (needsEmailConfirmation) {
+      // Show check email screen - user must confirm email before accessing app
+      setShowCheckEmail(true)
     } else {
+      // Email confirmation disabled in Supabase - go directly to app
       router.replace('/(app)')
     }
+  }
+
+  // Check email confirmation screen
+  if (showCheckEmail) {
+    return (
+      <View className="flex-1 bg-white justify-center px-8">
+        <View className="items-center">
+          <Text className="text-6xl mb-6">📧</Text>
+          <Text className="text-3xl font-bold text-gray-900 mb-4 text-center">Check Your Email</Text>
+          <Text className="text-lg text-gray-500 text-center mb-6 leading-7">
+            We sent a confirmation link to{'\n'}
+            <Text className="font-semibold text-gray-700">{email}</Text>
+          </Text>
+          <Text className="text-base text-gray-400 text-center mb-8 leading-6">
+            Click the link in the email to activate your account. After confirming, come back here and sign in.
+          </Text>
+          <TouchableOpacity
+            className="bg-primary-500 rounded-2xl py-4 px-8"
+            onPress={() => router.replace('/(auth)/login')}
+            activeOpacity={0.8}
+          >
+            <Text className="text-white text-lg font-semibold">Go to Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
   }
 
   return (

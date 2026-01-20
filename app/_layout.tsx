@@ -6,17 +6,22 @@ import { useAuthStore, useSyncStore } from '../store'
 
 export default function RootLayout() {
   const initialize = useAuthStore((state) => state.initialize)
+  const setupAuthListener = useAuthStore((state) => state.setupAuthListener)
   const initializeNetworkListener = useSyncStore((state) => state.initializeNetworkListener)
 
   useEffect(() => {
     // Initialize auth state
     initialize()
 
+    // Listen for auth state changes (email confirmation, token refresh, etc.)
+    const unsubscribeAuth = setupAuthListener()
+
     // Initialize network listener for offline sync
-    const unsubscribe = initializeNetworkListener()
+    const unsubscribeNetwork = initializeNetworkListener()
 
     return () => {
-      unsubscribe()
+      unsubscribeAuth()
+      unsubscribeNetwork()
     }
   }, [])
 
