@@ -22,6 +22,9 @@ interface FamilyState {
   fetchChildren: (familyId: string) => Promise<void>
   fetchRoutines: (familyId: string) => Promise<void>
   selectChild: (childId: string) => void
+  addChild: (name: string, age: number) => Promise<{ error: string | null }>
+  updateChild: (childId: string, name: string, age: number) => Promise<{ error: string | null }>
+  deleteChild: (childId: string) => Promise<{ error: string | null }>
   addRoutine: (
     name: string,
     routineType: string,
@@ -113,6 +116,105 @@ export const useFamilyStore = create<FamilyState>()(
       },
 
       selectChild: (childId) => set({ selectedChildId: childId }),
+
+      addChild: async (name, age) => {
+        const family = useAuthStore.getState().family
+        if (!family) {
+          return { error: 'No family found' }
+        }
+
+        set({ isLoading: true })
+
+        try {
+          const { data: child, error } = await supabase
+            .from('children')
+            .insert({
+              family_id: family.id,
+              name,
+              age,
+            })
+            .select()
+            .single()
+
+          if (error) {
+            return { error: error.message }
+          }
+
+          set((state) => ({
+            children: [...state.children, child],
+            selectedChildId: state.selectedChildId || child.id,
+          }))
+
+          return { error: null }
+        } catch (error) {
+          return { error: 'Failed to add child' }
+        } finally {
+          set({ isLoading: false })
+        }
+      },
+
+      updateChild: async (childId, name, age) => {
+        set({ isLoading: true })
+
+        try {
+          const { error } = await supabase
+            .from('children')
+            .update({ name, age })
+            .eq('id', childId)
+
+          if (error) {
+            return { error: error.message }
+          }
+
+          set((state) => ({
+            children: state.children.map((c) =>
+              c.id === childId ? { ...c, name, age } : c
+            ),
+          }))
+
+          return { error: null }
+        } catch (error) {
+          return { error: 'Failed to update child' }
+        } finally {
+          set({ isLoading: false })
+        }
+      },
+
+      deleteChild: async (childId) => {
+        set({ isLoading: true })
+
+        try {
+          // First delete any sessions for this child
+          await supabase.from('sessions').delete().eq('child_id', childId)
+
+          // Then delete the child
+          const { error } = await supabase
+            .from('children')
+            .delete()
+            .eq('id', childId)
+
+          if (error) {
+            return { error: error.message }
+          }
+
+          set((state) => {
+            const newChildren = state.children.filter((c) => c.id !== childId)
+            return {
+              children: newChildren,
+              selectedChildId:
+                state.selectedChildId === childId
+                  ? newChildren[0]?.id || null
+                  : state.selectedChildId,
+            }
+          })
+
+          return { error: null }
+        } catch (error) {
+          return { error: 'Failed to delete child' }
+        } finally {
+          set({ isLoading: false })
+        }
+      },
 
       addRoutine: async (name, routineType, tasks) => {
         const family = useAuthStore.getState().family

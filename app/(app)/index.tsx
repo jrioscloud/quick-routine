@@ -74,12 +74,12 @@ export default function HomeScreen() {
       )}
 
       {/* Child Selector */}
-      {children.length > 0 && (
-        <View className="px-6 py-4 bg-white">
-          <Text className="text-base font-semibold text-gray-700 mb-3">Select Child</Text>
-          <ChildSelector />
-        </View>
-      )}
+      <View className="px-6 py-4 bg-white">
+        <Text className="text-base font-semibold text-gray-700 mb-3">
+          {children.length > 0 ? 'Select Child' : 'Add a Child'}
+        </Text>
+        <ChildSelector />
+      </View>
 
       {/* Routines */}
       <View className="flex-1 px-6 pt-4">
